@@ -1,0 +1,28 @@
+pipeline {
+    agent any
+    environment{
+          GIT_REPO_NAME = "Tetris-manifest"
+          GIT_USER_NAME = "Pavangowda73"
+    }
+
+    stages {
+       stage('Checkout Code') {
+            steps {
+                git branch: 'main', url: 'https://github.com/Pavangowda73/Tetris-manifest.git'
+            }
+        }
+        stage('Update Deployment File') {
+            steps {
+                script {
+                    withCredentials([string(credentialsId: 'github-token', variable: 'GITHUB_TOKEN')]) {
+                        NEW_IMAGE_NAME = "pavan73384/tetrisv1:latest" 
+                        sh "sed -i 's|image: .*|image: $NEW_IMAGE_NAME|' deployment.yml"
+                        sh 'git add deployment.yml'
+                        sh "git commit -m 'Update deployment image to $NEW_IMAGE_NAME'"
+                        sh "git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} HEAD:main"
+                    }
+                }
+            }
+        }
+    }
+}
