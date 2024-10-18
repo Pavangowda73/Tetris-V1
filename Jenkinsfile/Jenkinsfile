@@ -1,0 +1,81 @@
+pipeline {
+    agent any
+    tools{
+        jdk 'jdk17'
+        nodejs 'node16'
+    }
+    environment{
+        SCANNER_HOME=tool 'sonar-scanner'
+      
+    }
+
+    stages {
+        stage('Git Checkout') {
+            steps {
+                git branch: 'main', url: 'https://github.com/Pavangowda73/Tetris-V1.git'
+            }
+        }
+        stage('Sonarqube analysis') {
+            steps {
+               withSonarQubeEnv('sonar-server') {
+                    sh ''' $SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=Amazon \
+                    -Dsonar.projectKey=Amazon '''
+                }
+            }
+        }
+        stage('Quality Gate') {
+            steps {
+                script{
+                    waitForQualityGate abortPipeline: false, credentialsId: 'Sonar-token'
+                }
+            }
+        }
+        stage('Install dependencies') {
+            steps {
+                sh 'npm install'
+            }
+        }
+        //stage('Owasp check') {
+          //  steps {
+            //   dependencyCheck additionalArguments: '--scan ./ --disableYarnAudit --disableNodeAudit', odcInstallation: 'DP-Check'
+             //   dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
+        //    }
+        //}
+        stage('Trivy file system scan') {
+            steps {
+                sh 'trivy fs . > trivyfs.txt'
+            }
+        }
+        stage('docker  build and tag') {
+            steps {
+                script{
+                    withDockerRegistry(credentialsId: 'docker-cred', toolName: 'docker') {
+                        sh '''
+                        docker build -t tetrisv1 .
+                        docker tag tetrisv1 pavan73384/tetrisv1:latest
+                        '''
+                    }
+                }
+            }
+        }
+        stage('Trivy image scan') {
+            steps {
+                sh 'trivy image pavan73384/tetrisv1:latest > imagefs.txt'
+            }
+        }
+        stage('docker PUSH') {
+            steps {
+                script{
+                    withDockerRegistry(credentialsId: 'docker-cred', toolName: 'docker') {
+                        sh 'docker push pavan73384/tetrisv1:latest'
+                    }
+                }
+            }
+        }
+         stage('build manifest job') {
+            steps {
+                build job : 'manifest', wait:true
+            }
+        }
+    }
+}
