@@ -6,75 +6,79 @@ pipeline {
     }
     environment{
         SCANNER_HOME=tool 'sonar-scanner'
-      
     }
 
     stages {
-        stage('Git Checkout') {
+        stage('Git checkout') {
             steps {
                 git branch: 'main', url: 'https://github.com/Pavangowda73/Tetris-V1.git'
             }
         }
-        stage('Sonarqube analysis') {
+        stage('sonarqube analysis') {
             steps {
-               withSonarQubeEnv('sonar-server') {
-                    sh ''' $SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=TetrisV1 \
-                    -Dsonar.projectKey=TetrisV1 '''
+                withSonarQubeEnv('sonar-server'){
+                    sh '''$SCANNER_HOME/bin/sonar-scanner   -Dsonar.projectName=Tetris-V1 \
+                          -Dsonar.projectKey=Tetris-V2'''
                 }
             }
         }
-        stage('Quality Gate') {
+        stage('Quality gate') {
             steps {
                 script{
                     waitForQualityGate abortPipeline: false, credentialsId: 'Sonar-token'
                 }
             }
         }
-        stage('Install dependencies') {
+        stage('Install dependency') {
             steps {
                 sh 'npm install'
             }
         }
-        //stage('Owasp check') {
-          //  steps {
-            //   dependencyCheck additionalArguments: '--scan ./ --disableYarnAudit --disableNodeAudit', odcInstallation: 'DP-Check'
-             //   dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
-        //    }
-        //}
-        stage('Trivy file system scan') {
+        stage('Dependency check') {
+            steps {
+                dependencyCheck additionalArguments: '--scan ./ --disableYarnAudit --disableNodeAudit', odcInstallation: 'DP-Check'
+                dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
+            }
+        }
+        stage('trivy file sytem scan') {
             steps {
                 sh 'trivy fs . > trivyfs.txt'
             }
         }
-        stage('docker  build and tag') {
+        stage('docker build and tag') {
             steps {
                 script{
                     withDockerRegistry(credentialsId: 'docker-cred', toolName: 'docker') {
-                        sh '''
-                        docker build -t tetrisv1 .
-                        docker tag tetrisv1 pavan73384/tetrisv1:latest
-                        '''
+                    sh '''
+                    docker build -t tetrisv1 .
+                    docker tag tetrisv1 pavan73384/tetrisv1:latest
+                    '''
                     }
                 }
             }
         }
-        stage('Trivy image scan') {
+        stage('trivy image scan') {
             steps {
-                sh 'trivy image pavan73384/tetrisv1:latest > imagefs.txt'
+                sh 'trivy image pavan73384/tetrisv1:latest > trivyimage.txt'
             }
         }
-        stage('docker PUSH') {
+         stage('docker push') {
             steps {
                 script{
-                    withDockerRegistry(credentialsId: 'docker-cred', toolName: 'docker') {
-                        sh 'docker push pavan73384/tetrisv1:latest'
+                     withDockerRegistry(credentialsId: 'docker-cred', toolName: 'docker') {
+                    sh 'docker push pavan73384/tetrisv1:latest'                
                     }
                 }
             }
         }
-         stage('build manifest job') {
+         //stage('docker run') {
+          //  steps {
+           //     sh 'docker run --name tetrisv1 -p 3000:3000 pavan73384/tetrisv1:latest'
+            //}
+        //}
+         stage('image updater') {
             steps {
-                build job : 'manifest', wait:true
+                build job:'manifest',wait:true
             }
         }
     }
