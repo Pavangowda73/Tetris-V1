@@ -1,0 +1,40 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Git Checkout') {
+            steps {
+                git branch: 'main', url: 'https://github.com/Pavangowda73/Tetris-V1.git'
+            }
+        }
+        stage('terraform init') {
+            steps {
+                dir('Eks-terraform') {
+                    sh 'terraform init'
+                }
+            }
+        }
+        stage('terraform validate') {
+            steps {
+                dir('Eks-terraform') {
+                    sh 'terraform validate'
+                }
+            }
+        }
+        stage('terraform plan') {
+            steps {
+                dir('Eks-terraform') {
+                    sh 'terraform plan'
+                }
+            }
+        }
+        stage('terraform apply/destroy') {
+            steps {
+                dir('Eks-terraform') {
+                    sh 'terraform ${action} --auto-approve'
+                }
+            }
+        }
+        
+    }
+}
