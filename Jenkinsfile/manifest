@@ -14,7 +14,7 @@ pipeline {
         stage('Update Deployment File') {
             steps {
                 script {
-                    withCredentials([string(credentialsId: 'github-token', variable: 'GITHUB_TOKEN')]) {
+                    withCredentials([string(credentialsId: 'github', variable: 'GITHUB_TOKEN')]) {
                         NEW_IMAGE_NAME = "pavan73384/tetrisv1:latest" 
                         sh "sed -i 's|image: .*|image: $NEW_IMAGE_NAME|' deployment.yml"
                         sh 'git add deployment.yml'
