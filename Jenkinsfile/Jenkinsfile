@@ -18,7 +18,7 @@ pipeline {
             steps {
                 withSonarQubeEnv('sonar-server'){
                     sh '''$SCANNER_HOME/bin/sonar-scanner   -Dsonar.projectName=Tetris-V1 \
-                          -Dsonar.projectKey=Tetris-V2'''
+                          -Dsonar.projectKey=Tetris-V1'''
                 }
             }
         }
